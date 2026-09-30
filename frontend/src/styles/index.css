@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-bg0 text-hi font-sans antialiased bg-grid bg-fixed;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-display font-semibold tracking-wide text-hi;
+  }
+}
+
+@layer components {
+  .panel {
+    @apply bg-bg1 border border-line rounded-md;
+  }
+
+  .panel-header {
+    @apply flex items-baseline justify-between px-4 py-3 border-b border-line;
+  }
+
+  .panel-header h2 {
+    @apply text-base uppercase tracking-wider text-mid;
+  }
+
+  .panel-body {
+    @apply p-4;
+  }
+
+  .pill {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-mono text-[11px] tracking-wide border border-line-strong text-mid;
+  }
+
+  .pill.good { @apply text-good border-good; }
+  .pill.warn { @apply text-warn border-warn; }
+  .pill.danger { @apply text-danger border-danger; }
+
+  .dot {
+    @apply w-[7px] h-[7px] rounded-full;
+    background: currentColor;
+    box-shadow: 0 0 6px currentColor;
+  }
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { @apply bg-line-strong rounded; }
