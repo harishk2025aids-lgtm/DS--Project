@@ -22,21 +22,34 @@ FEATURE_COLUMNS = [
     "humidity_pct",
 ]
 
+FEATURE_RANGES = {
+    "temperature_c": (1100, 1400),
+    "rolling_speed_mps": (4, 20),
+    "carbon_content_pct": (0.02, 0.4),
+    "manganese_pct": (0.3, 2.2),
+    "silicon_pct": (0.05, 0.6),
+    "cooling_rate_c_per_s": (2, 60),
+    "thickness_mm": (0.8, 8),
+    "tension_kn": (10, 90),
+    "furnace_pressure_bar": (0.7, 1.4),
+    "humidity_pct": (10, 95),
+}
+
 
 def generate_batches(n_rows: int = 20000, seed: int = 42) -> pd.DataFrame:
     rng = np.random.default_rng(seed)
 
     df = pd.DataFrame({
-        "temperature_c": rng.normal(1250, 40, n_rows).clip(1100, 1400),
-        "rolling_speed_mps": rng.normal(12, 2.5, n_rows).clip(4, 20),
-        "carbon_content_pct": rng.normal(0.18, 0.04, n_rows).clip(0.02, 0.4),
-        "manganese_pct": rng.normal(1.2, 0.3, n_rows).clip(0.3, 2.2),
-        "silicon_pct": rng.normal(0.3, 0.08, n_rows).clip(0.05, 0.6),
-        "cooling_rate_c_per_s": rng.normal(25, 8, n_rows).clip(2, 60),
-        "thickness_mm": rng.normal(3.2, 0.6, n_rows).clip(0.8, 8),
-        "tension_kn": rng.normal(45, 10, n_rows).clip(10, 90),
-        "furnace_pressure_bar": rng.normal(1.05, 0.08, n_rows).clip(0.7, 1.4),
-        "humidity_pct": rng.normal(55, 15, n_rows).clip(10, 95),
+        "temperature_c": rng.normal(1250, 40, n_rows).clip(*FEATURE_RANGES["temperature_c"]),
+        "rolling_speed_mps": rng.normal(12, 2.5, n_rows).clip(*FEATURE_RANGES["rolling_speed_mps"]),
+        "carbon_content_pct": rng.normal(0.18, 0.04, n_rows).clip(*FEATURE_RANGES["carbon_content_pct"]),
+        "manganese_pct": rng.normal(1.2, 0.3, n_rows).clip(*FEATURE_RANGES["manganese_pct"]),
+        "silicon_pct": rng.normal(0.3, 0.08, n_rows).clip(*FEATURE_RANGES["silicon_pct"]),
+        "cooling_rate_c_per_s": rng.normal(25, 8, n_rows).clip(*FEATURE_RANGES["cooling_rate_c_per_s"]),
+        "thickness_mm": rng.normal(3.2, 0.6, n_rows).clip(*FEATURE_RANGES["thickness_mm"]),
+        "tension_kn": rng.normal(45, 10, n_rows).clip(*FEATURE_RANGES["tension_kn"]),
+        "furnace_pressure_bar": rng.normal(1.05, 0.08, n_rows).clip(*FEATURE_RANGES["furnace_pressure_bar"]),
+        "humidity_pct": rng.normal(55, 15, n_rows).clip(*FEATURE_RANGES["humidity_pct"]),
     })
 
     # --- latent defect-risk function -------------------------------------

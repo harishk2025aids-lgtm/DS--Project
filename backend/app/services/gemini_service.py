@@ -115,3 +115,29 @@ def get_explanation_and_recommendations(
         fallback = _fallback_explanation(context)
         fallback["explanation"] += f" (Gemini call failed: {exc})"
         return fallback
+
+
+def answer_production_question(question: str, context: dict, fallback_answer: str) -> dict:
+    client = _get_client()
+    if client is None:
+        return {"answer": fallback_answer, "provider": "production-data fallback"}
+
+    prompt = (
+        "You are the production-data assistant for a steel quality control system. "
+        "Answer only from the supplied project data. If it does not contain the answer, say so. "
+        "Do not present correlation as causation and do not replace the project's prediction models.\n\n"
+        f"Project data (JSON): {json.dumps(context, default=str)}\n\n"
+        f"Operator question: {question}"
+    )
+    try:
+        response = client.models.generate_content(
+            model=settings.gemini_model,
+            contents=prompt,
+            config=types.GenerateContentConfig(temperature=0.2),
+        )
+        answer = (response.text or "").strip()
+        if answer:
+            return {"answer": answer, "provider": "Gemini"}
+    except Exception:  # noqa: BLE001
+        pass
+    return {"answer": fallback_answer, "provider": "production-data fallback"}

@@ -1,13 +1,17 @@
 import asyncio
+import hashlib
 import logging
 from contextlib import asynccontextmanager
+from datetime import datetime
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect  # type: ignore[reportMissingImports]
+from fastapi.middleware.cors import CORSMiddleware  # type: ignore[reportMissingImports]
 
 from app.config import settings
-from app.database import init_db
-from app.routers import predictions, dashboard, alerts, reports
+from app.database import SessionLocal, init_db
+from app import models
+from app.routers import predictions, dashboard, alerts, reports, insights, auth
+from app.routers.auth import get_current_user
 from app.streaming.broadcaster import broadcaster
 from app.streaming.consumer import run_consumer
 
@@ -54,10 +58,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(predictions.router)
-app.include_router(dashboard.router)
-app.include_router(alerts.router)
-app.include_router(reports.router)
+app.include_router(auth.router)
+app.include_router(predictions.router, dependencies=[Depends(get_current_user)])
+app.include_router(dashboard.router, dependencies=[Depends(get_current_user)])
+app.include_router(alerts.router, dependencies=[Depends(get_current_user)])
+app.include_router(reports.router, dependencies=[Depends(get_current_user)])
+app.include_router(insights.router, dependencies=[Depends(get_current_user)])
 
 
 @app.get("/")
@@ -80,6 +86,23 @@ async def live_feed(websocket: WebSocket):
     consumer via `broadcaster` -- this endpoint just registers/unregisters
     the connection and keeps it alive.
     """
+    token = websocket.cookies.get("foresight_session")
+    if not token:
+        await websocket.close(code=4401)
+        return
+
+    db = SessionLocal()
+    try:
+        session = db.query(models.AuthSession).filter(
+            models.AuthSession.token_hash == hashlib.sha256(token.encode()).hexdigest(),
+            models.AuthSession.expires_at > datetime.utcnow(),
+        ).first()
+        if not session:
+            await websocket.close(code=4401)
+            return
+    finally:
+        db.close()
+
     await broadcaster.connect(websocket)
     try:
         while True:

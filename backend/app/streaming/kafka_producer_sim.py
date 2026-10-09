@@ -18,7 +18,7 @@ from aiokafka import AIOKafkaProducer
 from aiokafka.errors import KafkaConnectionError
 
 from app.config import settings
-from app.ml.synthetic_data import generate_batches, FEATURE_COLUMNS
+from app.ml.synthetic_data import generate_batches, FEATURE_COLUMNS, FEATURE_RANGES
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -36,7 +36,11 @@ def _initial_state():
 
 def _drift(state: dict) -> dict:
     for c in FEATURE_COLUMNS:
-        state[c] += random.uniform(-1, 1) * (0.01 * abs(state[c]) + 0.05)
+        low, high = FEATURE_RANGES[c]
+        state[c] = min(
+            high,
+            max(low, state[c] + random.uniform(-1, 1) * (0.01 * abs(state[c]) + 0.05)),
+        )
     return state
 
 
