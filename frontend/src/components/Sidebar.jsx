@@ -1,9 +1,14 @@
 const NAV_ITEMS = [
   { key: "dashboard", label: "Live floor" },
   { key: "reports", label: "History" },
+  { key: "analytics", label: "Analytics" },
+  { key: "rootCause", label: "Root Cause" },
+  { key: "simulator", label: "Process Simulator" },
+  { key: "assistant", label: "AI Assistant" },
+  { key: "models", label: "Model Performance" },
 ];
 
-export default function Sidebar({ active, onNavigate, lineStatus, open, onClose }) {
+export default function Sidebar({ active, onNavigate, lineStatus, open, onClose, userEmail, onLogout }) {
   return (
     <>
       {open && (
@@ -54,6 +59,13 @@ export default function Sidebar({ active, onNavigate, lineStatus, open, onClose 
         </nav>
 
         <div className="mt-auto">
+          <div className="border-t border-line pt-3 mb-4">
+            <p className="text-[11px] uppercase tracking-wider text-low mb-1">Signed in</p>
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-mono text-xs text-mid truncate" title={userEmail}>{userEmail}</span>
+              <button onClick={onLogout} className="text-xs text-low hover:text-hi shrink-0">Sign out</button>
+            </div>
+          </div>
           <p className="text-[11px] uppercase tracking-wider text-low mb-2.5">Line status</p>
           <div className="flex flex-col gap-2">
             {Object.entries(lineStatus || {}).map(([line, status]) => (
