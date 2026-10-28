@@ -61,6 +61,7 @@ class RecommendationOut(BaseModel):
     explanation: str
     root_cause: Optional[str]
     recommended_actions: List[RecommendedAction]
+    provider: str = "rule-based fallback"
 
 
 class AlertOut(BaseModel):
@@ -82,3 +83,13 @@ class DashboardSummary(BaseModel):
     scrap_reduction_pct: float
     active_alerts: int
     line_status: Dict[str, str]
+
+
+class SimulationRequest(BaseModel):
+    current: ProcessParameters
+    modified: ProcessParameters
+
+
+class AIChatRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=2000)
+    batch_id: Optional[str] = None

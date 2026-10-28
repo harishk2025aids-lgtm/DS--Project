@@ -95,17 +95,21 @@ def get_recommendation(batch_code: str, db: Session = Depends(get_db)):
         "temperature_c": batch.temperature_c,
         "rolling_speed_mps": batch.rolling_speed_mps,
         "carbon_content_pct": batch.carbon_content_pct,
+        "manganese_pct": batch.manganese_pct,
+        "silicon_pct": batch.silicon_pct,
         "cooling_rate_c_per_s": batch.cooling_rate_c_per_s,
+        "thickness_mm": batch.thickness_mm,
         "tension_kn": batch.tension_kn,
         "furnace_pressure_bar": batch.furnace_pressure_bar,
+        "humidity_pct": batch.humidity_pct,
     }
 
     result = gemini_service.get_explanation_and_recommendations(
         batch_code=batch.batch_code,
         grade=batch.grade,
-        defect_probability=latest.defect_probability,
+        defect_probability=float(latest.defect_probability or 0.0),
         defect_type=latest.predicted_defect_type,
-        quality_score=latest.quality_score,
+        quality_score=float(latest.quality_score or 0.0),
         parameters=parameters,
         top_features=latest.shap_top_features or [],
     )
