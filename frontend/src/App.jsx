@@ -34,6 +34,12 @@ export default function App() {
     setActive(page);
   }
 
+  async function handleLogout() {
+    await api.logOut().catch(() => {});
+    setAuthUser(null);
+    setActive("dashboard");
+  }
+
   useEffect(() => {
     api.getCurrentUser()
       .then(setAuthUser)
@@ -64,16 +70,12 @@ export default function App() {
         onNavigate={setActive}
         lineStatus={lineStatus}
         userEmail={authUser.email}
-        onLogout={async () => {
-          await api.logOut().catch(() => {});
-          setAuthUser(null);
-          setActive("dashboard");
-        }}
+        onLogout={handleLogout}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
       <div className="flex-1 flex flex-col min-w-0">
-        <TopBar title={TITLES[active]} onMenuClick={() => setSidebarOpen(true)} />
+        <TopBar title={TITLES[active]} onMenuClick={() => setSidebarOpen(true)} onLogout={handleLogout} />
         {active === "dashboard" && <Dashboard />}
         {active === "reports" && <Reports onNavigate={navigateToBatch} />}
         {active === "analytics" && <Analytics />}

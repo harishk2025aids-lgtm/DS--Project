@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     critical_defect_probability_threshold: float = 0.85
 
     @property
+    def has_valid_gemini_key(self) -> bool:
+        key = (self.gemini_api_key or "").strip()
+        return bool(key) and not key.lower().startswith("your_") and not key.lower().startswith("example")
+
+    @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 

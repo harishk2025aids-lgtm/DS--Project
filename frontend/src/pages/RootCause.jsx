@@ -15,11 +15,23 @@ export default function RootCause({ initialBatchId }) {
   const [batches, setBatches] = useState([]);
   const [batchCode, setBatchCode] = useState("");
   const [data, setData] = useState(null);
+<<<<<<< codespace-ideal-parakeet-7vj664qg57qp26gj
+  const [recommendation, setRecommendation] = useState(null);
+  const [recommendationLoading, setRecommendationLoading] = useState(false);
+  const [recommendationError, setRecommendationError] = useState(null);
+=======
+>>>>>>> main
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
+<<<<<<< codespace-ideal-parakeet-7vj664qg57qp26gj
+    setData(null);
+    setRecommendation(null);
+    setRecommendationError(null);
+=======
+>>>>>>> main
     api.getBatchReport({ days: 30 }).then((rows) => {
       if (cancelled) return;
       setBatches(rows);
@@ -41,6 +53,11 @@ export default function RootCause({ initialBatchId }) {
     const code = event.target.value;
     setBatchCode(code);
     setData(null);
+<<<<<<< codespace-ideal-parakeet-7vj664qg57qp26gj
+    setRecommendation(null);
+    setRecommendationError(null);
+=======
+>>>>>>> main
     setError(null);
     if (!code) return;
     setLoading(true);
@@ -53,6 +70,23 @@ export default function RootCause({ initialBatchId }) {
     }
   }
 
+<<<<<<< codespace-ideal-parakeet-7vj664qg57qp26gj
+  async function requestRecommendation() {
+    if (!batchCode || recommendationLoading) return;
+    setRecommendation(null);
+    setRecommendationError(null);
+    setRecommendationLoading(true);
+    try {
+      setRecommendation(await api.getRecommendation(batchCode));
+    } catch (err) {
+      setRecommendationError(err.message);
+    } finally {
+      setRecommendationLoading(false);
+    }
+  }
+
+=======
+>>>>>>> main
   const contributions = data?.contributions || [];
   const primary = data?.primary_cause;
   const dataQualityFlags = data?.data_quality_flags || [];
@@ -112,6 +146,28 @@ export default function RootCause({ initialBatchId }) {
                 <div><p className="text-[10px] uppercase text-low">Risk level</p><p className={`mt-1 font-mono uppercase ${riskClass}`}>{data.risk_level}</p></div>
               </div>
             </Panel>
+<<<<<<< codespace-ideal-parakeet-7vj664qg57qp26gj
+            <Panel
+              title="AI root-cause explanation and process recommendations"
+              action={<button type="button" onClick={requestRecommendation} disabled={!batchCode || recommendationLoading} className="border border-line-strong px-3 py-1.5 text-[10px] uppercase tracking-wider text-molten hover:border-molten disabled:opacity-50">{recommendationLoading ? "Analyzing…" : "Ask AI"}</button>}
+            >
+              <p className="text-xs leading-relaxed text-low">AI uses this batch's recorded prediction and process readings to explain possible contributors and suggest adjustments. The prediction model remains authoritative; verify every adjustment against approved plant limits and procedures before applying it.</p>
+              {recommendationError && <Notice tone="warn">AI recommendation could not be loaded: {recommendationError}</Notice>}
+              {recommendation && <div className="mt-4 flex flex-col gap-3">
+                <span className={`pill w-fit ${recommendation.provider === "Gemini" ? "good" : "warn"}`}>{recommendation.provider === "Gemini" ? "Gemini AI analysis" : "Rule-based fallback · AI unavailable"}</span>
+                {recommendation.root_cause && <div><p className="text-[10px] uppercase text-low">Likely root cause</p><p className="mt-1 text-sm text-hi">{recommendation.root_cause}</p></div>}
+                <p className="text-sm leading-relaxed text-mid">{recommendation.explanation}</p>
+                <div className="flex flex-col gap-3">
+                  {recommendation.recommended_actions.map((action, index) => <div key={`${action.parameter}-${index}`} className="border-l-2 border-molten pl-3">
+                    <p className="font-mono text-sm text-molten">{action.parameter}</p>
+                    <p className="mt-0.5 text-sm text-hi">{action.change}</p>
+                    <p className="mt-1 text-xs text-mid">{action.reason}</p>
+                  </div>)}
+                </div>
+              </div>}
+            </Panel>
+=======
+>>>>>>> main
             <Panel title="Explanation"><p className="text-sm leading-relaxed text-mid">{data.explanation}</p></Panel>
             <Panel title="Input data quality">
               {dataQualityFlags.length ? <>

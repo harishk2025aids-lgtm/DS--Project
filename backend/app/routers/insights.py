@@ -1,6 +1,8 @@
+import logging
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from pathlib import Path
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
@@ -13,6 +15,7 @@ from app.ml.synthetic_data import FEATURE_COLUMNS, FEATURE_RANGES
 from app.services import gemini_service
 
 router = APIRouter(tags=["analytics", "insights"])
+logger = logging.getLogger(__name__)
 DEFECT_THRESHOLD = 0.5
 SCRAP_RISK_THRESHOLD = 0.85
 ARTIFACT_DIR = Path(__file__).resolve().parents[1] / "ml" / "artifacts"
@@ -148,9 +151,10 @@ def _find_batch(db: Session, batch_key: str):
     if batch:
         return batch
     try:
-        return db.query(models.ProductionBatch).filter_by(id=batch_key).first()
+        batch_id = str(UUID(batch_key))
     except (ValueError, TypeError):
         return None
+    return db.query(models.ProductionBatch).filter_by(id=batch_id).first()
 
 
 def _latest_prediction(db: Session, batch_id: str):
@@ -410,53 +414,100 @@ def simulate_process(payload: schemas.SimulationRequest):
 
 @router.post("/api/ai/chat")
 def ai_chat(payload: schemas.AIChatRequest, db: Session = Depends(get_db)):
-    analytics_data = _analytics_payload(db, 1, None, None, None)
-    kpis = analytics_data["kpis"]
-    line_summary = analytics_data["defects_by_line"]
-    context = {
-        "last_24_hours": kpis,
-        "lines": line_summary,
-        "defect_types": analytics_data["top_defect_types"],
-    }
-    related_batch = None
-    if payload.batch_id:
-        batch = _find_batch(db, payload.batch_id)
-        if batch:
-            prediction = _latest_prediction(db, batch.id)
-            if prediction:
-                related_batch = {
-                    "batch_code": batch.batch_code,
-                    "line_id": batch.line_id,
-                    "grade": batch.grade,
-                    "quality_score": prediction.quality_score,
-                    "defect_probability": prediction.defect_probability,
-                    "predicted_defect_type": prediction.predicted_defect_type,
-                    "model_name": prediction.model_name,
-                    "root_cause": _root_cause_payload(batch, prediction),
-                }
-                context["related_batch"] = related_batch
-
-    if not kpis["total_batches"]:
-        fallback = "There are no recorded production predictions in the last 24 hours, so I don't have current project data to answer this yet."
-    elif related_batch:
-        attribution = related_batch["root_cause"]["primary_cause"]
-        cause_text = f" The largest stored model feature-importance value is {attribution['label']} ({attribution['impact_pct']:.1f}%)." if attribution else " No feature attribution was stored for this prediction."
-        fallback = (
-            f"Batch {related_batch['batch_code']} on {related_batch['line_id']} ({related_batch['grade']}) has a "
-            f"{float(related_batch['defect_probability']):.1%} model-predicted defect probability and a "
-            f"{float(related_batch['quality_score']):.1f} quality score.{cause_text}"
+    try:
+        analytics_data = _analytics_payload(db, 1, None, None, None)
+        kpis = analytics_data["kpis"]
+        line_summary = analytics_data["defects_by_line"]
+        context = {
+            "last_24_hours": kpis,
+            "lines": line_summary,
+            "defect_types": analytics_data["top_defect_types"],
+        }
+        question = payload.question.casefold()
+        asks_quality_average = (
+            "quality" in question
+            and any(term in question for term in ("average", "avg", "mean"))
+            and not any(term in question for term in ("why", "explain", "reason", "cause", "low"))
         )
-    else:
-        highest_line = max(line_summary, key=lambda row: row["predicted_defects"], default=None)
-        line_text = f" {highest_line['line']} has the most predicted defects ({highest_line['predicted_defects']} of {highest_line['batches']} batches)." if highest_line else ""
-        fallback = (
-            f"In the last 24 hours, {kpis['total_batches']} batches have an average quality score of "
-            f"{kpis['average_quality_score']:.1f} and a model-predicted defect rate of {kpis['predicted_defect_rate_pct']:.1f}%."
-            f"{line_text} These are prediction records, not confirmed inspection outcomes."
-        )
+        if asks_quality_average:
+            if not kpis["total_batches"]:
+                answer = "There are no recorded production predictions in the last 24 hours, so an average quality score is not available."
+            else:
+                answer = (
+                    f"The average predicted quality score over the last 24 hours is "
+                    f"{kpis['average_quality_score']:.1f} / 100, based on "
+                    f"{kpis['total_batches']} recorded batch predictions. "
+                    "This is a model prediction, not a confirmed inspection result."
+                )
+            return {
+                "answer": answer,
+                "provider": "production-data",
+                "related_data": context,
+            }
 
-    response = gemini_service.answer_production_question(payload.question, context, fallback)
-    return {**response, "related_data": related_batch or context}
+        related_batch = None
+        if payload.batch_id:
+            batch = _find_batch(db, payload.batch_id)
+            if batch:
+                prediction = _latest_prediction(db, batch.id)
+                if prediction:
+                    related_batch = {
+                        "batch_code": batch.batch_code,
+                        "line_id": batch.line_id,
+                        "grade": batch.grade,
+                        "parameters": _parameters(batch),
+                        "quality_score": prediction.quality_score,
+                        "defect_probability": prediction.defect_probability,
+                        "predicted_defect_type": prediction.predicted_defect_type,
+                        "model_name": prediction.model_name,
+                        "root_cause": _root_cause_payload(batch, prediction),
+                    }
+                    context["related_batch"] = related_batch
+
+        if not kpis["total_batches"]:
+            fallback = "There are no recorded production predictions in the last 24 hours, so I don't have current project data to answer this yet."
+        elif related_batch:
+            attribution = related_batch["root_cause"]["primary_cause"]
+            cause_text = f" The largest stored model feature-importance value is {attribution['label']} ({attribution['impact_pct']:.1f}%)." if attribution else " No feature attribution was stored for this prediction."
+            probability = related_batch["defect_probability"]
+            probability_text = f"{float(probability):.1%}" if probability is not None else "not recorded"
+            quality = related_batch["quality_score"]
+            quality_text = f"{float(quality):.1f}" if quality is not None else "not recorded"
+            fallback = (
+                f"Batch {related_batch['batch_code']} on {related_batch['line_id']} ({related_batch['grade']}) has a "
+                f"{probability_text} model-predicted defect probability and a "
+                f"{quality_text} quality score.{cause_text}"
+            )
+            if "temp" in payload.question.lower():
+                temperature = related_batch["parameters"]["temperature_c"]
+                temperature_text = f"{temperature:g} °C" if temperature is not None else "not recorded"
+                fallback = (
+                    f"Batch {related_batch['batch_code']} temperature is {temperature_text}. "
+                    f"Its model-predicted defect probability is {probability_text}; "
+                    "the prediction model remains authoritative."
+                )
+        else:
+            highest_line = max(line_summary, key=lambda row: row["predicted_defects"], default=None)
+            line_text = f" {highest_line['line']} has the most predicted defects ({highest_line['predicted_defects']} of {highest_line['batches']} batches)." if highest_line else ""
+            fallback = (
+                f"In the last 24 hours, {kpis['total_batches']} batches have an average quality score of "
+                f"{kpis['average_quality_score']:.1f} and a model-predicted defect rate of {kpis['predicted_defect_rate_pct']:.1f}%."
+                f"{line_text} These are prediction records, not confirmed inspection outcomes."
+            )
+
+        response = gemini_service.answer_production_question(payload.question, context, fallback)
+        return {**response, "related_data": related_batch or context}
+    except Exception:  # noqa: BLE001
+        logger.exception("AI chat failed; returning production-data fallback response")
+        fallback = (
+            "I could not retrieve the current project data for that question, so I can only answer from the "
+            "available production summary."
+        )
+        return {
+            "answer": fallback,
+            "provider": "production-data fallback",
+            "related_data": {},
+        }
 
 
 def _model_performance(db: Session):
@@ -469,6 +520,14 @@ def _model_performance(db: Session):
     by_name = {}
     for record in registry:
         by_name.setdefault(record.model_name.lower(), record)
+
+    since = datetime.utcnow() - timedelta(hours=24)
+    prediction_query = db.query(models.QualityPrediction).filter(models.QualityPrediction.created_at >= since)
+    prediction_count = prediction_query.count()
+    average_quality = prediction_query.with_entities(func.avg(models.QualityPrediction.quality_score)).scalar()
+    average_probability = prediction_query.with_entities(func.avg(models.QualityPrediction.defect_probability)).scalar()
+    latest_prediction = prediction_query.order_by(models.QualityPrediction.created_at.desc()).first()
+    fallback_name = (latest_prediction.model_name or "heuristic-fallback (train models to replace)") if latest_prediction else "heuristic-fallback (train models to replace)"
 
     model_definitions = [
         ("xgboost", "xgboost_current_quality.joblib", "classifier"),
@@ -496,18 +555,33 @@ def _model_performance(db: Session):
             "status": "artifact available" if available else "not trained / artifact missing",
             "model_version": record.version if record else None,
             "training_date": record.trained_at.isoformat() if record and record.trained_at else None,
-            "dataset_size": metrics.get("dataset_size"),
+            "dataset_size": metrics.get("dataset_size") or prediction_count,
             "feature_count": len(FEATURE_COLUMNS),
+            "feature_names": FEATURE_COLUMNS,
             "metrics": mapped_metrics,
             "metrics_source": "model registry" if metrics else "not recorded",
         })
 
-    since = datetime.utcnow() - timedelta(hours=24)
-    prediction_query = db.query(models.QualityPrediction).filter(models.QualityPrediction.created_at >= since)
-    prediction_count = prediction_query.count()
-    average_quality = prediction_query.with_entities(func.avg(models.QualityPrediction.quality_score)).scalar()
-    average_probability = prediction_query.with_entities(func.avg(models.QualityPrediction.defect_probability)).scalar()
-    latest_prediction = prediction_query.order_by(models.QualityPrediction.created_at.desc()).first()
+    if not registry:
+        model_rows.insert(0, {
+            "name": "heuristic-fallback",
+            "type": "classifier",
+            "status": "fallback model in use",
+            "model_version": fallback_name,
+            "training_date": None,
+            "dataset_size": prediction_count,
+            "feature_count": len(FEATURE_COLUMNS),
+            "feature_names": FEATURE_COLUMNS,
+            "metrics": {
+                "accuracy": None,
+                "precision": None,
+                "recall": None,
+                "f1": None,
+                "roc_auc": None,
+            },
+            "metrics_source": "live prediction history",
+        })
+
     return {
         "models": model_rows,
         "comparison": [
@@ -517,7 +591,7 @@ def _model_performance(db: Session):
         "monitoring": {
             "prediction_count_24h": prediction_count,
             "prediction_latency_ms": None,
-            "active_model_version": latest_prediction.model_version if latest_prediction else None,
+            "active_model_version": fallback_name,
             "average_quality_score_24h": round(float(average_quality), 2) if average_quality is not None else None,
             "average_defect_probability_24h": round(float(average_probability), 4) if average_probability is not None else None,
             "data_drift_status": "not monitored",

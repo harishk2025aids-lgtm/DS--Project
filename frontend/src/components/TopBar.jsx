@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-export default function TopBar({ title, onMenuClick }) {
+export default function TopBar({ title, onMenuClick, onLogout }) {
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -22,7 +22,16 @@ export default function TopBar({ title, onMenuClick }) {
           {title}
         </h2>
       </div>
-      <span className="font-mono text-xs sm:text-sm text-low">{now.toLocaleTimeString()}</span>
+      <div className="flex items-center gap-3 sm:gap-5">
+        <span className="font-mono text-xs sm:text-sm text-low">{now.toLocaleTimeString()}</span>
+        <button
+          type="button"
+          onClick={onLogout}
+          className="border border-line-strong px-3 py-1.5 text-xs uppercase tracking-wider text-mid hover:border-molten hover:text-molten"
+        >
+          Sign out
+        </button>
+      </div>
     </div>
   );
 }
