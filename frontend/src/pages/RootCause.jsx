@@ -15,17 +15,23 @@ export default function RootCause({ initialBatchId }) {
   const [batches, setBatches] = useState([]);
   const [batchCode, setBatchCode] = useState("");
   const [data, setData] = useState(null);
+<<<<<<< codespace-ideal-parakeet-7vj664qg57qp26gj
   const [recommendation, setRecommendation] = useState(null);
   const [recommendationLoading, setRecommendationLoading] = useState(false);
   const [recommendationError, setRecommendationError] = useState(null);
+=======
+>>>>>>> main
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
+<<<<<<< codespace-ideal-parakeet-7vj664qg57qp26gj
     setData(null);
     setRecommendation(null);
     setRecommendationError(null);
+=======
+>>>>>>> main
     api.getBatchReport({ days: 30 }).then((rows) => {
       if (cancelled) return;
       setBatches(rows);
@@ -47,8 +53,11 @@ export default function RootCause({ initialBatchId }) {
     const code = event.target.value;
     setBatchCode(code);
     setData(null);
+<<<<<<< codespace-ideal-parakeet-7vj664qg57qp26gj
     setRecommendation(null);
     setRecommendationError(null);
+=======
+>>>>>>> main
     setError(null);
     if (!code) return;
     setLoading(true);
@@ -61,6 +70,7 @@ export default function RootCause({ initialBatchId }) {
     }
   }
 
+<<<<<<< codespace-ideal-parakeet-7vj664qg57qp26gj
   async function requestRecommendation() {
     if (!batchCode || recommendationLoading) return;
     setRecommendation(null);
@@ -75,6 +85,8 @@ export default function RootCause({ initialBatchId }) {
     }
   }
 
+=======
+>>>>>>> main
   const contributions = data?.contributions || [];
   const primary = data?.primary_cause;
   const dataQualityFlags = data?.data_quality_flags || [];
@@ -134,6 +146,7 @@ export default function RootCause({ initialBatchId }) {
                 <div><p className="text-[10px] uppercase text-low">Risk level</p><p className={`mt-1 font-mono uppercase ${riskClass}`}>{data.risk_level}</p></div>
               </div>
             </Panel>
+<<<<<<< codespace-ideal-parakeet-7vj664qg57qp26gj
             <Panel
               title="AI root-cause explanation and process recommendations"
               action={<button type="button" onClick={requestRecommendation} disabled={!batchCode || recommendationLoading} className="border border-line-strong px-3 py-1.5 text-[10px] uppercase tracking-wider text-molten hover:border-molten disabled:opacity-50">{recommendationLoading ? "Analyzing…" : "Ask AI"}</button>}
@@ -153,6 +166,8 @@ export default function RootCause({ initialBatchId }) {
                 </div>
               </div>}
             </Panel>
+=======
+>>>>>>> main
             <Panel title="Explanation"><p className="text-sm leading-relaxed text-mid">{data.explanation}</p></Panel>
             <Panel title="Input data quality">
               {dataQualityFlags.length ? <>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { api } from "../api";
+<<<<<<< codespace-ideal-parakeet-7vj664qg57qp26gj
 import { KpiCard, Notice, Panel } from "../components/InsightUI";
 
 const CLASSIFIER_METRICS = ["accuracy", "precision", "recall", "f1", "roc_auc"];
@@ -11,12 +12,21 @@ const DEMO_METRICS = {
   lstm: { mae: 0.42, rmse: 0.61 },
 };
 const DEMO_MONITORING = { prediction_latency_ms: 42, data_drift_status: "low drift" };
+=======
+import { EmptyState, KpiCard, Notice, Panel } from "../components/InsightUI";
+
+const CLASSIFIER_METRICS = ["accuracy", "precision", "recall", "f1", "roc_auc"];
+>>>>>>> main
 const GRID = "#2B333D";
 const AXIS = "#66707C";
 const TOOLTIP = { background: "#1A1F26", border: "1px solid #3A4450", borderRadius: 3, color: "#ECEEF1" };
 
 function displayMetric(value) {
+<<<<<<< codespace-ideal-parakeet-7vj664qg57qp26gj
   return Number(value).toFixed(3);
+=======
+  return value == null ? "Not recorded" : Number(value).toFixed(3);
+>>>>>>> main
 }
 
 export default function ModelPerformance() {
@@ -32,17 +42,21 @@ export default function ModelPerformance() {
   const models = data?.models || [];
   const monitoring = data?.monitoring || {};
   const rowsWithMetrics = models.some((model) => Object.values(model.metrics || {}).some((value) => value != null));
+<<<<<<< codespace-ideal-parakeet-7vj664qg57qp26gj
   const usesFallback = models.some((model) => model.name.toLowerCase().includes("heuristic") || model.status === "fallback model in use");
   const comparison = models.map((model) => ({
     model: model.name,
     ...DEMO_METRICS[model.name],
     ...Object.fromEntries(Object.entries(model.metrics || {}).filter(([, value]) => value != null)),
   }));
+=======
+>>>>>>> main
 
   return (
     <div className="flex flex-col gap-5 p-4 sm:p-6">
       <div><p className="text-[11px] uppercase tracking-wider text-low">Model registry and monitoring</p><h1 className="text-xl mt-1">Model performance</h1></div>
       {error && <Notice tone="warn">Model registry could not be loaded: {error}</Notice>}
+<<<<<<< codespace-ideal-parakeet-7vj664qg57qp26gj
       {data && <Notice tone="warn">Values marked DEMO are illustrative examples for this screen only; they are not measured model results, registered training runs, latency measurements, or drift checks. Recorded prediction averages and registered metrics remain sourced from the database.</Notice>}
       {usesFallback && <Notice tone="warn">No trained model artifacts are registered in the database. The live system is currently running the heuristic fallback model derived from recent prediction history.</Notice>}
 
@@ -51,11 +65,21 @@ export default function ModelPerformance() {
         <KpiCard label="Mean quality · 24h" value={monitoring.average_quality_score_24h == null ? "Not recorded" : `${monitoring.average_quality_score_24h} / 100`} />
         <KpiCard label="Mean defect probability" value={monitoring.average_defect_probability_24h == null ? "Not recorded" : `${(monitoring.average_defect_probability_24h * 100).toFixed(1)}%`} tone="warn" />
         <KpiCard label="Prediction latency · DEMO" value={`${monitoring.prediction_latency_ms ?? DEMO_MONITORING.prediction_latency_ms} ms`} />
+=======
+      {data && <Notice tone="warn">Only values present in the model registry or prediction database are displayed. Missing training metrics, latency, and drift are not estimated.</Notice>}
+
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+        <KpiCard label="Predictions · 24h" value={monitoring.prediction_count_24h ?? "—"} />
+        <KpiCard label="Mean quality · 24h" value={monitoring.average_quality_score == null ? "Not recorded" : `${monitoring.average_quality_score} / 100`} />
+        <KpiCard label="Mean defect probability" value={monitoring.average_defect_probability == null ? "Not recorded" : `${(monitoring.average_defect_probability * 100).toFixed(1)}%`} tone="warn" />
+        <KpiCard label="Prediction latency" value={monitoring.prediction_latency_ms == null ? "Not instrumented" : `${monitoring.prediction_latency_ms} ms`} />
+>>>>>>> main
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
         {models.map((model) => {
           const metricKeys = model.type === "forecast" ? ["mae", "rmse"] : CLASSIFIER_METRICS;
+<<<<<<< codespace-ideal-parakeet-7vj664qg57qp26gj
           const demoMetrics = DEMO_METRICS[model.name] || {};
           const hasDemoMetrics = metricKeys.some((key) => model.metrics?.[key] == null && demoMetrics[key] != null);
           return <Panel key={model.name} title={model.name.toUpperCase()} action={<span className={`pill ${model.status === "artifact available" ? "good" : "warn"}`}>{model.status}</span>}>
@@ -69,13 +93,30 @@ export default function ModelPerformance() {
               <div className="flex justify-between gap-3"><dt className="text-low">Dataset size</dt><dd className="font-mono text-mid">{model.dataset_size ?? "Not recorded"}</dd></div>
               <div className="flex justify-between gap-3"><dt className="text-low">Features</dt><dd className="font-mono text-mid text-right break-all">{(model.feature_names || []).join(", ") || model.feature_count}</dd></div>
               <div className="flex justify-between gap-3"><dt className="text-low">Metrics source</dt><dd className="text-mid">{hasDemoMetrics ? "Illustrative demo values" : model.metrics_source}</dd></div>
+=======
+          return <Panel key={model.name} title={model.name.toUpperCase()} action={<span className={`pill ${model.status === "artifact available" ? "good" : "warn"}`}>{model.status}</span>}>
+            <div className="grid grid-cols-2 gap-3">
+              {metricKeys.map((key) => <div key={key} className="border-b border-line pb-2"><p className="text-[10px] uppercase text-low">{key.replace("roc_auc", "ROC-AUC")}</p><p className="font-mono text-lg mt-1 text-hi">{displayMetric(model.metrics?.[key])}</p></div>)}
+            </div>
+            <dl className="mt-4 flex flex-col gap-2 text-xs">
+              <div className="flex justify-between gap-3"><dt className="text-low">Version</dt><dd className="font-mono text-mid">{model.model_version || "Not registered"}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-low">Training date</dt><dd className="font-mono text-mid">{model.training_date ? new Date(model.training_date).toLocaleString() : "Not recorded"}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-low">Dataset size</dt><dd className="font-mono text-mid">{model.dataset_size ?? "Not recorded"}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-low">Features</dt><dd className="font-mono text-mid">{model.feature_count}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-low">Metrics source</dt><dd className="text-mid">{model.metrics_source}</dd></div>
+>>>>>>> main
             </dl>
           </Panel>;
         })}
       </div>
 
+<<<<<<< codespace-ideal-parakeet-7vj664qg57qp26gj
       <Panel title={`Model comparison · ${rowsWithMetrics ? "registered and demo metrics" : "illustrative demo metrics"}`}>
         {data && <div className="h-72"><ResponsiveContainer width="100%" height="100%"><BarChart data={comparison.filter((row) => row.model !== "lstm")}>
+=======
+      <Panel title="Model comparison · recorded classification metrics">
+        {rowsWithMetrics ? <div className="h-72"><ResponsiveContainer width="100%" height="100%"><BarChart data={data.comparison.filter((row) => row.model !== "lstm")}>
+>>>>>>> main
           <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
           <XAxis dataKey="model" tick={{ fill: AXIS, fontSize: 10 }} tickLine={false} axisLine={{ stroke: GRID }} />
           <YAxis domain={[0, 1]} tick={{ fill: AXIS, fontSize: 10 }} tickLine={false} axisLine={false} />
@@ -84,14 +125,22 @@ export default function ModelPerformance() {
           <Bar dataKey="f1" name="F1" fill="#FF6A39" maxBarSize={38} />
           <Bar dataKey="roc_auc" name="ROC-AUC" fill="#4FA3D1" maxBarSize={38} />
           <Bar dataKey="accuracy" name="Accuracy" fill="#5FBE87" maxBarSize={38} />
+<<<<<<< codespace-ideal-parakeet-7vj664qg57qp26gj
         </BarChart></ResponsiveContainer></div>}
+=======
+        </BarChart></ResponsiveContainer></div> : <EmptyState>No registered training metrics are available for comparison.</EmptyState>}
+>>>>>>> main
       </Panel>
 
       <Panel title="Model monitoring">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div><p className="text-[10px] uppercase text-low">Active version</p><p className="font-mono mt-1 text-hi">{monitoring.active_model_version || "Not recorded"}</p></div>
           <div><p className="text-[10px] uppercase text-low">Recent performance</p><p className="mt-1 text-mid">Based on the rolling 24-hour prediction averages above.</p></div>
+<<<<<<< codespace-ideal-parakeet-7vj664qg57qp26gj
           <div><p className="text-[10px] uppercase text-low">Data drift · DEMO</p><p className="mt-1 text-warn uppercase font-mono">{monitoring.data_drift_status && monitoring.data_drift_status !== "not monitored" ? monitoring.data_drift_status : DEMO_MONITORING.data_drift_status}</p></div>
+=======
+          <div><p className="text-[10px] uppercase text-low">Data drift</p><p className="mt-1 text-warn uppercase font-mono">{monitoring.data_drift_status || "Not monitored"}</p></div>
+>>>>>>> main
         </div>
       </Panel>
     </div>
